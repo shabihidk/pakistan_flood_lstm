@@ -191,7 +191,7 @@ MIT License
 
 ## Author
 
-Shahbaz Iqbal Khan
+Shabih Ul Hassan
 
 ## Contact
 
