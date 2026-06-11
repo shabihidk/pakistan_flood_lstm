@@ -6,25 +6,39 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
 lib/
+!frontend/src/lib/
 lib64/
 parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 # Virtual environments
 venv/
 ENV/
 env/
-.venv
+.venv/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -32,19 +46,49 @@ env/
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Models and data (large files)
-models/
-data/
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
 
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
 
-# System
-.DS_Store
-Thumbs.db
-
 # Logs
 *.log
+logs/
+
+# Model artifacts (keep folder via .gitkeep)
+models/*
+!models/.gitkeep
+*.pth
+*.pkl
+*.pt
+*.onnx
+
+# Training / inference data (keep folder via .gitkeep)
+data/*
+!data/.gitkeep
+
+# Generated inference outputs
+*_inference_results.csv
+Islamabad_inference_results.csv
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/*.local
+frontend/node_modules/.tmp/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Vite / npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

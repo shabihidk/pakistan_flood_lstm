@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+@theme {
+  --font-sans: 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  --color-brand-teal: #0f766e;
+  --color-brand-orange: #f97316;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-slate-100 text-slate-800 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer utilities {
+  .dashboard-card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .pulse-alert {
+    animation: pulse-alert 1.5s ease-in-out infinite;
+  }
+}
+
+.leaflet-container {
+  font-family: var(--font-sans);
+  z-index: 0;
+}
+
+.basin-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  border: 3px solid white;
+  background: #2563eb;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.basin-marker:hover {
+  transform: scale(1.08);
+}
+
+.basin-marker.active {
+  background: #f97316;
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.45);
+}
+
+@keyframes pulse-alert {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}

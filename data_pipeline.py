@@ -24,8 +24,6 @@ def process_location(loc):
     df_dyn = pd.concat([pd.read_csv(f) for f in dyn_files], ignore_index=True)
     df_dyn["Date"] = pd.to_datetime(df_dyn["Date"])
     df_dyn = df_dyn.drop_duplicates(subset=["Date"]).sort_values("Date").reset_index(drop=True)
-    
-    # Keep all data up to the end of 2025. Completely cut out 2026 to avoid corrupted data.
     df_dyn = df_dyn[df_dyn["Date"].dt.year <= 2025].reset_index(drop=True)
 
     topo = pd.read_csv(os.path.join(BASE_PATH, "Static_Topography_All_Locations.csv"))
@@ -101,13 +99,31 @@ def generate_labels(master_dfs):
             quetta_sudden_saturation = (df["rain_3d"] >= p95_rain3) & (df["soil_moisture"] >= p80_soil)
             extreme_signal = (quetta_cloudburst | quetta_sudden_saturation).astype(int)
 
-        df["Extreme_Flood_Signal"] = extreme_signal
         df["Flood_Label"] = np.maximum(df["Verified_Event_Label"], df["Extreme_Flood_Signal"])
+
+        future_window = np.full(len(df), np.nan)
+        for i in range(len(df) - 7):
+            future_window[i] = df["Flood_Label"].iloc[i + 1 : i + 8].max()
+
+        df["Target_7Day"] = future_window
+        df = df.dropna(subset=["Target_7Day"]).copy()
+        df["Target_7Day"] = df["Target_7Day"].astype(int)
+
         labeled_dfs[city] = df
+        print(
+            f"{city}: flood days={int(df['Flood_Label'].sum())}, "
+            f"7-day positives={int(df['Target_7Day'].sum())}"
+        )
+
     return labeled_dfs
 
 def prepare_data():
-    master_dfs = {loc: process_location(loc) for loc in LOCATIONS if process_location(loc) is not None}
+    master_dfs = {}
+    for loc in LOCATIONS:
+        df = process_location(loc)
+        if df is not None:
+            master_dfs[loc] = df
+
     labeled_dfs = generate_labels(master_dfs)
 
     train_dfs, val_dfs = {}, {}
@@ -121,7 +137,6 @@ def prepare_data():
     dyn_scaler = StandardScaler().fit(train_df_combined[DYNAMIC_COLS])
     stat_scaler = StandardScaler().fit(train_df_combined[STATIC_COLS])
 
-    # Save scalers for production/inference
     joblib.dump(dyn_scaler, os.path.join(MODEL_DIR, 'dyn_scaler.pkl'))
     joblib.dump(stat_scaler, os.path.join(MODEL_DIR, 'stat_scaler.pkl'))
 
