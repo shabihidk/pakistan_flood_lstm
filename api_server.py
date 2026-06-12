@@ -1,9 +1,15 @@
+import os
 from datetime import datetime
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from inference import InferenceError, SUPPORTED_LOCATIONS, get_inference_payload
+from validate_pipeline import get_quick_diagnostics, run_deep_audit
 
 app = Flask(__name__)
 CORS(app)
@@ -57,5 +63,37 @@ def inference():
     return jsonify(result)
 
 
+@app.post("/api/audit/quick")
+def quick_audit():
+    payload = request.get_json(silent=True) or {}
+    location = payload.get("location")
+    target_date = payload.get("target_date")
+    predicted_probability = payload.get("predicted_probability", 0)
+
+    if not location or not target_date:
+        return jsonify({"success": False, "error": "location and target_date are required."}), 400
+
+    diagnostics = get_quick_diagnostics(location, target_date, float(predicted_probability))
+    if "error" in diagnostics:
+        return jsonify({"success": False, "error": diagnostics["error"]}), 400
+
+    return jsonify({"success": True, "diagnostics": diagnostics})
+
+
+@app.post("/api/audit/deep")
+def deep_audit():
+    payload = request.get_json(silent=True) or {}
+    result = run_deep_audit(
+        location=payload.get("location"),
+        target_date_str=payload.get("target_date"),
+        predicted_probability=float(payload.get("predicted_probability", 0)),
+        diagnostics=payload.get("diagnostics", {}),
+    )
+    if "error" in result:
+        return jsonify({"success": False, "error": result["error"]}), 500
+    return jsonify({"success": True, "audit_data": result}), 200
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug = os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
+    app.run(host="0.0.0.0", port=5000, debug=debug)

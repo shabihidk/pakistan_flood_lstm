@@ -71,6 +71,10 @@ models/*
 # Training / inference data (keep folder via .gitkeep)
 data/*
 !data/.gitkeep
+!data/historical_events.json
+
+# Audit evidence cache
+audit_cache/
 
 # Generated inference outputs
 *_inference_results.csv

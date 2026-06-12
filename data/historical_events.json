@@ -1,0 +1,20 @@
+[
+  {
+    "location": "Islamabad",
+    "name": "2021 E-11 Cloudburst",
+    "start": "2021-07-27",
+    "end": "2021-07-29",
+    "impact_classification": "Catastrophic Flood",
+    "summary": "Sector E-11 Islamabad cloudburst validated via NDMA.",
+    "sources": [{ "title": "NDMA Historical Archives", "url": "local", "date": "2021-07-28" }]
+  },
+  {
+    "location": "Swat",
+    "name": "2022 Monsoon Catastrophe",
+    "start": "2022-08-20",
+    "end": "2022-08-30",
+    "impact_classification": "Catastrophic Flood",
+    "summary": "Historic 2022 monsoon flash flooding validated.",
+    "sources": [{ "title": "ReliefWeb 2022 Pakistan Floods", "url": "local", "date": "2022-08-25" }]
+  }
+]

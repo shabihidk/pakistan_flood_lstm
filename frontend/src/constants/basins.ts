@@ -78,6 +78,11 @@ export const BASEMAP_OPTIONS: BasemapOption[] = [
 
 export const PAKISTAN_MAP_CENTER: [number, number] = [30.5, 69.5]
 export const PAKISTAN_MAP_ZOOM = 6
+/** Leaflet bounds: [[south, west], [north, east]] */
+export const PAKISTAN_MAP_BOUNDS: [[number, number], [number, number]] = [
+  [23.5, 60.5],
+  [37.5, 77.5],
+]
 
 export const MODEL_METRICS = {
   architecture: 'LSTM',

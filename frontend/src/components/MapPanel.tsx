@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo } from 'react'
 import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { Layers, MapPinned } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import {
   BASEMAP_OPTIONS,
   BASIN_MARKERS,
@@ -39,6 +39,19 @@ function MapFocus({ lat, lng }: { lat: number; lng: number }) {
   return null
 }
 
+function MapResize() {
+  const map = useMap()
+
+  useEffect(() => {
+    const refresh = () => map.invalidateSize()
+    refresh()
+    window.addEventListener('resize', refresh)
+    return () => window.removeEventListener('resize', refresh)
+  }, [map])
+
+  return null
+}
+
 function MapPanelComponent({
   activeBasin,
   onBasinSelect,
@@ -57,78 +70,70 @@ function MapPanelComponent({
   )
 
   return (
-    <section className="dashboard-card flex h-full min-h-[420px] flex-col overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-          <MapPinned className="h-4 w-4 text-teal-700" />
-          Live Basin Map
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Basemap
-          </span>
-          {BASEMAP_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onBasemapChange(option.id)}
-              className={cn(
-                'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-                basemap === option.id
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="relative flex-1">
-        {isLoading && (
-          <div className="absolute inset-0 z-[500] flex items-center justify-center bg-white/50 backdrop-blur-[1px]">
-            <div className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-teal-800 shadow-lg">
-              Running LSTM inference...
-            </div>
+    <div className="absolute inset-0 h-full w-full">
+      {isLoading && (
+        <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center bg-slate-900/10 backdrop-blur-[1px]">
+          <div className="rounded-xl bg-white/95 px-4 py-3 text-sm font-medium text-teal-800 shadow-lg">
+            Running LSTM inference...
           </div>
-        )}
+        </div>
+      )}
 
-        <MapContainer
-          center={PAKISTAN_MAP_CENTER}
-          zoom={PAKISTAN_MAP_ZOOM}
-          className="h-full w-full min-h-[360px]"
-          scrollWheelZoom
-        >
-          <TileLayer
-            key={selectedBasemap.id}
-            url={selectedBasemap.url}
-            attribution={selectedBasemap.attribution}
+      <MapContainer
+        center={PAKISTAN_MAP_CENTER}
+        zoom={PAKISTAN_MAP_ZOOM}
+        className="h-full w-full"
+        scrollWheelZoom
+      >
+        <TileLayer
+          key={selectedBasemap.id}
+          url={selectedBasemap.url}
+          attribution={selectedBasemap.attribution}
+        />
+        <MapResize />
+
+        {BASIN_MARKERS.map((marker, index) => (
+          <Marker
+            key={marker.id}
+            position={[marker.lat, marker.lng]}
+            icon={createBasinIcon(index + 1, activeBasin === marker.id)}
+            eventHandlers={{
+              click: () => onBasinSelect(marker.id),
+            }}
           />
+        ))}
 
-          {BASIN_MARKERS.map((marker, index) => (
-            <Marker
-              key={marker.id}
-              position={[marker.lat, marker.lng]}
-              icon={createBasinIcon(index + 1, activeBasin === marker.id)}
-              eventHandlers={{
-                click: () => onBasinSelect(marker.id),
-              }}
-            />
-          ))}
+        {activeMarker && <MapFocus lat={activeMarker.lat} lng={activeMarker.lng} />}
+      </MapContainer>
 
-          {activeMarker && <MapFocus lat={activeMarker.lat} lng={activeMarker.lng} />}
-        </MapContainer>
+      <div className="pointer-events-auto absolute top-[4.5rem] left-1/2 z-[1000] flex -translate-x-1/2 flex-wrap items-center justify-center gap-1.5 rounded-xl border border-white/60 bg-white/90 px-3 py-2 shadow-lg backdrop-blur-md">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+          Basemap
+        </span>
+        {BASEMAP_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onBasemapChange(option.id)}
+            className={cn(
+              'rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors',
+              basemap === option.id
+                ? 'bg-orange-500 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="pointer-events-none absolute bottom-4 left-4 z-[400] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Layers className="h-3.5 w-3.5 text-teal-700" />
-            Click a numbered station marker to run inference
-          </div>
+      <div className="pointer-events-none absolute bottom-4 left-1/2 z-[400] -translate-x-1/2 rounded-xl border border-white/60 bg-white/90 px-3 py-2 shadow-md backdrop-blur-md">
+        <div className="flex items-center gap-2 text-xs text-slate-600">
+          <Layers className="h-3.5 w-3.5 text-teal-700" />
+          Click a numbered marker to run inference
         </div>
       </div>
-    </section>
+    </div>
   )
 }
 
