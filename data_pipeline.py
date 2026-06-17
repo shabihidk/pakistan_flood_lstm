@@ -99,6 +99,7 @@ def generate_labels(master_dfs):
             quetta_sudden_saturation = (df["rain_3d"] >= p95_rain3) & (df["soil_moisture"] >= p80_soil)
             extreme_signal = (quetta_cloudburst | quetta_sudden_saturation).astype(int)
 
+        df["Extreme_Flood_Signal"] = extreme_signal
         df["Flood_Label"] = np.maximum(df["Verified_Event_Label"], df["Extreme_Flood_Signal"])
 
         future_window = np.full(len(df), np.nan)

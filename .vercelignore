@@ -1,0 +1,17 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+audit_cache/
+frontend/node_modules/
+frontend/dist/
+data/**/*.zip
+data/**/*.xlsx
+data/irsa*
+data/Pakistans*
+data/season-wise*
+data/terraces*
+scripts/

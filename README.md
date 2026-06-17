@@ -185,6 +185,51 @@ Training labels are based on documented flood events:
 - Attention mechanisms for feature importance
 - Web dashboard for flood risk visualization
 
+## Deploy to Vercel
+
+The dashboard and API deploy together on Vercel. Inference uses **ONNX Runtime** (not PyTorch) so the serverless function stays within size limits.
+
+### One-time: export ONNX artifacts
+
+After training locally:
+
+```bash
+pip install -r requirements-train.txt
+python scripts/export_onnx.py
+```
+
+Commit the inference bundle:
+
+- `models/flood_model.onnx`
+- `models/model_meta.json`
+- `models/dyn_scaler.pkl`
+- `models/stat_scaler.pkl`
+- All CSV files under `data/` (see Data Structure)
+
+### Vercel setup
+
+1. Import the GitHub repo in [Vercel](https://vercel.com/new).
+2. Leave the default build settings — `vercel.json` at the repo root configures everything.
+3. Add **Environment Variables** (Project → Settings → Environment Variables):
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `GEMINI_API_KEY` | For Deep Audit only | Server-side only; never expose to the frontend |
+| `GEMINI_MODEL` | Optional | Default: `gemini-2.0-flash` |
+| `MODEL_VERSION` | Optional | Shown in audit responses |
+
+4. Deploy. The React app is served from `/` and the Flask API from `/api/*`.
+
+### Local development vs production
+
+| Task | Command |
+|------|---------|
+| Train model | `pip install -r requirements-train.txt` then `python app.py` |
+| Run API locally | `pip install -r requirements.txt` then `python api_server.py` |
+| Run frontend | `cd frontend && npm install && npm run dev` |
+
+Local training uses PyTorch; Vercel production uses ONNX automatically when `VERCEL=1`.
+
 ## License
 
 MIT License

@@ -63,15 +63,20 @@ logs/
 # Model artifacts (keep folder via .gitkeep)
 models/*
 !models/.gitkeep
+!models/flood_model.onnx
+!models/model_meta.json
+!models/dyn_scaler.pkl
+!models/stat_scaler.pkl
 *.pth
-*.pkl
 *.pt
-*.onnx
 
 # Training / inference data (keep folder via .gitkeep)
 data/*
 !data/.gitkeep
 !data/historical_events.json
+!data/Dynamic_*.csv
+!data/SemiStatic_*.csv
+!data/Static_Topography_All_Locations.csv
 
 # Audit evidence cache
 audit_cache/

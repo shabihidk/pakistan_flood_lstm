@@ -1,3 +1,4 @@
+import json
 import os
 from functools import lru_cache
 from typing import Tuple
@@ -5,40 +6,113 @@ from typing import Tuple
 import joblib
 import numpy as np
 import pandas as pd
-import torch
 
 from config import DYNAMIC_COLS, MODEL_DIR, STATIC_COLS, WINDOW_SIZE
 from data_pipeline import process_location
-from model import FloodLSTM
 
 SUPPORTED_LOCATIONS = ["Islamabad", "Quetta", "Swat", "Jhang"]
 FORECAST_HORIZON_DAYS = 7
+_LOCATION_FRAMES: dict[str, pd.DataFrame] = {}
 
 
 class InferenceError(Exception):
     pass
 
 
+def _onnx_runtime_available() -> bool:
+    try:
+        import onnxruntime  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _torch_runtime_available() -> bool:
+    try:
+        import torch  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _use_onnx_backend() -> bool:
+    if os.getenv("USE_TORCH", "").lower() in {"1", "true", "yes"}:
+        return False
+    onnx_path = os.path.join(MODEL_DIR, "flood_model.onnx")
+    meta_path = os.path.join(MODEL_DIR, "model_meta.json")
+    if os.getenv("VERCEL") == "1" or os.getenv("USE_ONNX", "").lower() in {"1", "true", "yes"}:
+        return os.path.exists(onnx_path) and os.path.exists(meta_path)
+    return (
+        os.path.exists(onnx_path)
+        and os.path.exists(meta_path)
+        and _onnx_runtime_available()
+    )
+
+
+def _artifact_paths():
+    return {
+        "dyn_scaler": os.path.join(MODEL_DIR, "dyn_scaler.pkl"),
+        "stat_scaler": os.path.join(MODEL_DIR, "stat_scaler.pkl"),
+        "checkpoint": os.path.join(MODEL_DIR, "best_flood_model.pth"),
+        "onnx": os.path.join(MODEL_DIR, "flood_model.onnx"),
+        "meta": os.path.join(MODEL_DIR, "model_meta.json"),
+    }
+
+
 @lru_cache(maxsize=1)
 def _load_model_bundle():
-    dyn_scaler_path = os.path.join(MODEL_DIR, "dyn_scaler.pkl")
-    stat_scaler_path = os.path.join(MODEL_DIR, "stat_scaler.pkl")
-    checkpoint_path = os.path.join(MODEL_DIR, "best_flood_model.pth")
+    paths = _artifact_paths()
+    dyn_scaler = joblib.load(paths["dyn_scaler"])
+    stat_scaler = joblib.load(paths["stat_scaler"])
 
-    if not all(os.path.exists(path) for path in (dyn_scaler_path, stat_scaler_path, checkpoint_path)):
+    if _use_onnx_backend():
+        import onnxruntime as ort
+
+        if not os.path.exists(paths["onnx"]) or not os.path.exists(paths["meta"]):
+            raise InferenceError(
+                "ONNX model artifacts not found. Run: python scripts/export_onnx.py"
+            )
+
+        with open(paths["meta"], encoding="utf-8") as handle:
+            meta = json.load(handle)
+
+        session = ort.InferenceSession(
+            paths["onnx"],
+            providers=["CPUExecutionProvider"],
+        )
+        return {
+            "backend": "onnx",
+            "dyn_scaler": dyn_scaler,
+            "stat_scaler": stat_scaler,
+            "session": session,
+            "threshold": float(meta["best_threshold"]),
+        }
+
+    if not _torch_runtime_available():
+        raise InferenceError(
+            "No inference runtime available. Install onnxruntime or torch, "
+            "or deploy with exported ONNX artifacts."
+        )
+
+    import torch
+
+    from model import FloodLSTM
+
+    if not os.path.exists(paths["checkpoint"]):
         raise InferenceError(
             "Model artifacts not found. Train the model first to populate the models/ directory."
         )
 
-    dyn_scaler = joblib.load(dyn_scaler_path)
-    stat_scaler = joblib.load(stat_scaler_path)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FloodLSTM().to(device)
-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
+    checkpoint = torch.load(paths["checkpoint"], map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
 
     return {
+        "backend": "torch",
         "dyn_scaler": dyn_scaler,
         "stat_scaler": stat_scaler,
         "model": model,
@@ -47,11 +121,40 @@ def _load_model_bundle():
     }
 
 
+def _run_forward(bundle, x_dyn: np.ndarray, x_stat: np.ndarray) -> float:
+    if bundle["backend"] == "onnx":
+        logits = bundle["session"].run(
+            None,
+            {
+                "x_dyn": x_dyn.astype(np.float32),
+                "x_stat": x_stat.astype(np.float32),
+            },
+        )[0]
+        logit = float(np.asarray(logits).reshape(-1)[0])
+        return float(1.0 / (1.0 + np.exp(-logit)))
+
+    import torch
+
+    x_dyn_tensor = torch.tensor(x_dyn, dtype=torch.float32)
+    x_stat_tensor = torch.tensor(x_stat, dtype=torch.float32)
+    with torch.no_grad():
+        logit = bundle["model"](
+            x_dyn_tensor.to(bundle["device"]),
+            x_stat_tensor.to(bundle["device"]),
+        )
+        probability = torch.sigmoid(logit).item()
+    return float(probability)
+
+
 def _prepare_location_frame(location: str) -> pd.DataFrame:
     if location not in SUPPORTED_LOCATIONS:
         raise InferenceError(
             f"Unsupported location '{location}'. Choose one of: {', '.join(SUPPORTED_LOCATIONS)}"
         )
+
+    cached = _LOCATION_FRAMES.get(location)
+    if cached is not None:
+        return cached
 
     df = process_location(location)
     if df is None or df.empty:
@@ -59,7 +162,9 @@ def _prepare_location_frame(location: str) -> pd.DataFrame:
 
     df = df.copy()
     df["Date"] = pd.to_datetime(df["Date"]).dt.normalize()
-    return df.sort_values("Date").reset_index(drop=True)
+    prepared = df.sort_values("Date").reset_index(drop=True)
+    _LOCATION_FRAMES[location] = prepared
+    return prepared
 
 
 def _date_index(df: pd.DataFrame, target_date: str) -> int:
@@ -88,16 +193,10 @@ def predict_at_date(location: str, target_date: str, bundle=None, df=None) -> fl
     static_data = bundle["stat_scaler"].transform(df[STATIC_COLS])
 
     window_start = row_idx - WINDOW_SIZE
-    x_dyn = torch.tensor(
-        dynamic_data[window_start:row_idx], dtype=torch.float32
-    ).unsqueeze(0)
-    x_stat = torch.tensor(static_data[row_idx], dtype=torch.float32).unsqueeze(0)
+    x_dyn = dynamic_data[window_start:row_idx][np.newaxis, ...]
+    x_stat = static_data[row_idx : row_idx + 1]
 
-    with torch.no_grad():
-        logit = bundle["model"](x_dyn.to(bundle["device"]), x_stat.to(bundle["device"]))
-        probability = torch.sigmoid(logit).item()
-
-    return float(probability)
+    return _run_forward(bundle, x_dyn, x_stat)
 
 
 def build_rolling_outlook(location: str, anchor_date: str) -> list[dict]:
@@ -156,15 +255,15 @@ def run_location_inference(location: str) -> Tuple[pd.DataFrame, float]:
     if not x_dyn_list:
         raise InferenceError(f"Insufficient history to run inference for {location}.")
 
-    x_dyn_tensor = torch.tensor(np.array(x_dyn_list), dtype=torch.float32)
-    x_stat_tensor = torch.tensor(np.array(x_stat_list), dtype=torch.float32)
-
-    with torch.no_grad():
-        logits = bundle["model"](
-            x_dyn_tensor.to(bundle["device"]),
-            x_stat_tensor.to(bundle["device"]),
+    probs = []
+    for x_dyn, x_stat in zip(x_dyn_list, x_stat_list):
+        probs.append(
+            _run_forward(
+                bundle,
+                x_dyn[np.newaxis, ...],
+                x_stat[np.newaxis, ...],
+            )
         )
-        probs = torch.sigmoid(logits).cpu().numpy()
 
     results_df = pd.DataFrame(
         {

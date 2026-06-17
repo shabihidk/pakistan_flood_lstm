@@ -99,3 +99,22 @@ def evaluate_model(model, val_loader, device, model_path):
     print(f"Threshold Used: {best_threshold:.2f}")
     print(classification_report(all_labels, all_preds, digits=4))
     print("Confusion Matrix:\n", confusion_matrix(all_labels, all_preds))
+
+    try:
+        import subprocess
+        import sys
+
+        export_script = os.path.join(os.path.dirname(__file__), "scripts", "export_onnx.py")
+        result = subprocess.run(
+            [sys.executable, export_script],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            print(result.stdout.strip())
+        else:
+            detail = result.stderr.strip() or result.stdout.strip()
+            print(f"[WARN] ONNX export skipped: {detail}")
+    except Exception as error:
+        print(f"[WARN] ONNX export skipped: {error}")

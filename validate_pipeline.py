@@ -20,7 +20,11 @@ GEMINI_MODEL_FALLBACKS = (
 MODEL_VERSION = os.getenv("MODEL_VERSION", "v1.5.0")
 VALID_LOCATIONS = {"islamabad", "swat", "jhang", "quetta"}
 
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "audit_cache")
+CACHE_DIR = (
+    "/tmp/audit_cache"
+    if os.getenv("VERCEL") == "1"
+    else os.path.join(os.path.dirname(__file__), "audit_cache")
+)
 os.makedirs(CACHE_DIR, exist_ok=True)
 _gemini_client = None
 
