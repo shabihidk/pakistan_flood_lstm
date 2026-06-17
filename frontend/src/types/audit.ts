@@ -1,5 +1,4 @@
 export interface AuditDiagnostics {
-  telemetry_reliability_score?: number
   prediction_residual?: number
   expected_physics_risk?: number
   heuristic_findings?: string[]
@@ -28,7 +27,6 @@ export interface DeepAuditResult {
   final_assessment?: string
   confidence_reason?: string
   prediction_residual?: number
-  telemetry_score?: number
   generated_at?: string
   model_version?: string
   error?: string

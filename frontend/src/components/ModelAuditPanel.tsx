@@ -65,10 +65,8 @@ export function ModelAuditPanel({
     )
   }
 
-  const score = diagnostics.telemetry_reliability_score ?? 0
-  const scoreColor =
-    score > 80 ? 'text-emerald-700' : score > 50 ? 'text-amber-700' : 'text-red-700'
   const residual = diagnostics.prediction_residual ?? 0
+  const residualPct = residual * 100
 
   return (
     <div className="dashboard-card space-y-4 p-4">
@@ -152,21 +150,15 @@ export function ModelAuditPanel({
             <Activity className="h-4 w-4 text-teal-700" />
             <h3 className="text-sm font-semibold text-slate-900">Telemetry Diagnostics</h3>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-slate-500">
-              Residual{' '}
-              <strong
-                className={Math.abs(residual) > 0.4 ? 'text-red-700' : 'text-slate-800'}
-              >
-                {residual > 0 ? '+' : ''}
-                {residual.toFixed(2)}
-              </strong>
-            </span>
-            <span className="text-slate-400">·</span>
-            <span className="text-slate-500">
-              Score <strong className={scoreColor}>{score.toFixed(0)}/100</strong>
-            </span>
-          </div>
+          <span className="text-xs text-slate-500">
+            Residual{' '}
+            <strong
+              className={Math.abs(residual) > 0.4 ? 'text-red-700' : 'text-slate-800'}
+            >
+              {residualPct > 0 ? '+' : ''}
+              {residualPct.toFixed(0)}%
+            </strong>
+          </span>
         </div>
 
         {diagnostics.heuristic_findings?.map((finding, index) => (
