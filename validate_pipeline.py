@@ -286,7 +286,9 @@ def compute_hydrological_diagnostics(df_window: pd.DataFrame, predicted_prob: fl
     score = 100.0
     score -= metrics["rain_missing_pct"] * 40
     score -= metrics["soil_missing_pct"] * 30
-    score -= min(max_gap_days, 5) * 10
+    # Daily CSV cadence is a 1-day diff between rows — only penalize actual holes (>1 day).
+    gap_penalty_days = max(0, max_gap_days - 1)
+    score -= min(gap_penalty_days, 5) * 10
     if metrics["low_variance_detected"]:
         score -= 20
 
