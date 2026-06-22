@@ -1,4 +1,16 @@
-# Python
+# PINN / GloFAS archive (local only)
+PINNS Shit/
+
+# Duplicate Colab drop folder (canonical: models/flood_lstm_v4/)
+flood lstm update/
+flood lstm update.zip
+
+# Legacy city telemetry JSON
+frontend/public/data/telemetry/
+
+# Raw admin shapefiles (100MB+; keep locally — app uses src/data/pk_*.json GeoJSON)
+frontend/src/Pakistan-Administrative-Boundaries/
+
 __pycache__/
 *.py[cod]
 *$py.class
@@ -35,10 +47,15 @@ ENV/
 env/
 .venv/
 
-# Environment & secrets
+# Environment & secrets (never commit)
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+!frontend/.env.example
 
 # IDE
 .vscode/
@@ -59,24 +76,24 @@ desktop.ini
 # Logs
 *.log
 logs/
+.cursor/
 
-# Model artifacts (keep folder via .gitkeep)
+# Model artifacts (Flood_LSTMV4 — copy Colab outputs locally)
 models/*
 !models/.gitkeep
-!models/flood_model.onnx
-!models/model_meta.json
-!models/dyn_scaler.pkl
-!models/stat_scaler.pkl
+!models/flood_lstm_v4/model_meta.json
+!models/flood_lstm_v4/model_definition.py
+!models/flood_lstm_v4/inference_batch.py
+!models/flood_lstm_v4/*.joblib
+!models/flood_lstm_v4/README.md
 *.pth
 *.pt
+*.onnx
+*.pkl
 
-# Training / inference data (keep folder via .gitkeep)
+# Local training CSVs (legacy 3-city data — not used at runtime)
 data/*
 !data/.gitkeep
-!data/historical_events.json
-!data/Dynamic_*.csv
-!data/SemiStatic_*.csv
-!data/Static_Topography_All_Locations.csv
 
 # Audit evidence cache
 audit_cache/

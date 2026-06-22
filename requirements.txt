@@ -1,10 +1,18 @@
+# Pakistan Flood LSTM — unified Python dependencies
+# Install: pip install -r requirements.txt
+
+# Core API + Supabase (Vercel serverless proxy)
 pandas==2.2.2
 numpy==1.26.4
 scikit-learn==1.4.2
 joblib==1.5.3
-onnxruntime==1.20.1
 flask==3.1.0
 flask-cors==5.0.1
-jsonschema==4.23.0
-google-genai==1.52.0
 python-dotenv==1.0.1
+supabase==2.15.0
+requests==2.32.3
+
+# Flood_LSTMV4 inference (local Flask API + batch jobs)
+torch>=2.2.0
+
+# Vercel serverless uses api/requirements.txt (no PyTorch). This file is the full local/inference-host install.

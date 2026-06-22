@@ -1,6 +1,0 @@
-{
-  "best_threshold": 0.7299999999999996,
-  "best_f1": 0.600896860986547,
-  "window_size": 60,
-  "backend": "onnx"
-}
