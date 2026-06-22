@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd frontend && npm ci && npm run build",
+  "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "cd frontend && npm ci",
+  "installCommand": "cd frontend && npm ci --include=dev",
   "framework": null,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
@@ -10,7 +10,8 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "{services/**,api_server.py,!scripts/**,!**/__pycache__/**,!inference_v4.py,!models/**}",
+      "includeFiles": "{api_server.py,services/**}",
+      "maxDuration": 30,
       "memory": 1024
     }
   }

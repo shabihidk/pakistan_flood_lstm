@@ -27,6 +27,27 @@ Copy `.env.example` → `.env` and `frontend/.env.example` → `frontend/.env`. 
 
 The app validates env naming at startup (blocks `VITE_*SERVICE_ROLE*` on the server; blocks secret-like `VITE_*` names in the browser bundle).
 
+### Vercel project settings
+
+| Setting | Value |
+|---------|--------|
+| **Root Directory** | *(empty — repo root, not `frontend`)* |
+| **Framework Preset** | Other (uses `vercel.json`) |
+
+**Production environment variables** (Vercel dashboard → Settings → Environment Variables):
+
+| Variable | Required | Notes |
+|----------|----------|--------|
+| `VITE_SUPABASE_URL` | Yes* | Embedded in frontend build |
+| `VITE_SUPABASE_ANON_KEY` | Yes* | Anon key only — never service role |
+| `VITE_API_BASE_URL` | No | Default `/api` |
+| `SUPABASE_URL` | Yes | Python API proxy |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server only — do **not** prefix with `VITE_` |
+
+\*Or leave `VITE_*` empty and rely on `/api` proxy only.
+
+Redeploy after changing `VITE_*` vars (they are baked in at build time).
+
 ### Backend / inference host (root `.env`)
 
 ```env
